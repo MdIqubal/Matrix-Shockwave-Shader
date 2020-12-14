@@ -43,7 +43,7 @@ Shader "ShockWaveShader" {
                 float _Height;
                 float4 _StartPos;
                 float _Thickness;
-                float  _Speed;
+                float _Speed;
                 float _FadeDistance;
                 float _StartShockWave;
                 float _CurrTime;
@@ -53,27 +53,25 @@ Shader "ShockWaveShader" {
                     if (_StartShockWave != 1) {
                         return;
                     }
-                    //Distance of wave
-                    float waveDist = (_Time.y - _CurrTime)* _Speed;
+                    //moving wave radius, _currTime is set from script
+                    float waveRadius = (_Time.y - _CurrTime)* _Speed;
                     
-                    //Get vertex pos in world and calculate current distance from start pos
-                    float3 vertexWorldPos = mul(unity_ObjectToWorld, v.vertex).xyz;
-                    float currDist = distance(vertexWorldPos.xyz, _StartPos.xyz);
+                    //Get vertex pos in world and calculate current radius from start pos
+                    float4 vertexWorldPos = mul(unity_ObjectToWorld, v.vertex);
+                    float currRadius = distance(vertexWorldPos.xyz, _StartPos.xyz);
 
-                    //Get distance from crest in 0-1 range
-                    float distanceFromCrest = 1 - abs(waveDist - currDist) / (_Thickness * 0.5);
-                    //get height from sin for a sin like crest
-                    float currHeight = sin(distanceFromCrest * 1.57) * _Height;
-
-                    //if the vertex lies in the wave , pull it by currHeight
-                    if (currDist < _FadeDistance && currDist > (waveDist - _Thickness * 0.5) && currDist < (waveDist + _Thickness * 0.5)) {
+                    //if the vertex lies in the wave and within fade distance, pull it up
+                    if (currRadius < _FadeDistance && currRadius > waveRadius && currRadius < (waveRadius + _Thickness)){
+                        //Get a value from current radius in 0 - pi range
+                        float theta = (currRadius - waveRadius) / _Thickness * 3.14;
+                        //get height from sin for a sin like crest
+                        float currHeight = sin(theta) * _Height;
                         //To fade the wave as it approaches the fade distance
-                        float fadeFactor = 1 - currDist / _FadeDistance;
-                        vertexWorldPos += v.normal * currHeight * fadeFactor ;
-                    }
-
-                    //Assign back the vertex pos in object space
-                    v.vertex.xyz = mul(unity_WorldToObject, vertexWorldPos).xyz;
+                        float fadeFactor = 1 - currRadius / _FadeDistance;
+                        vertexWorldPos.xyz += v.normal * currHeight * fadeFactor ;
+                        //Assign back the vertex pos in object space
+                        v.vertex = mul(unity_WorldToObject, vertexWorldPos);
+                    } 
                 }
 
                 struct Input {
